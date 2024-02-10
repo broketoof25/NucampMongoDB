@@ -1,5 +1,8 @@
 const MongoClient = require('mongodb').MongoClient;
 const assert = require('assert').strict;
+//require the operations module.  now we have access to the 4 CRUD methods in the 
+//operation.js file (module)
+const dboper = require('./operations');
 
 //setup connection to MongoDB Server
 const url = 'mongodb://localhost:27017/';
@@ -28,23 +31,34 @@ MongoClient.connect(url, {useUnifiedTopology: true}, (err, client) => {
         assert.strictEqual(err, null);
         console.log('Dropped Collection', result)
 
-        //recreate campsites Collection
-        const collection = db.collection('campsites');
-
         //insert a document into the Collection
-        collection.insertOne({name: "Breadcrumb Trail Campground", description: "Test"}, (err, result) => {
-            assert.strictEqual(err, null);
+        dboper.insertDocument(db, {name: "Breadcrumb Trail Campground", description: "Test"}, 'campsites', result => {
             console.log('Insert Document:', result.ops);
 
-            //print to console all the Documents, give collection.find() an empty parameter list to do this.  then chain a toArray() to it
-            collection.find().toArray((err, docs) => {
-                assert.strictEqual(err, null);
+            dboper.findDocuments(db, 'campsites', docs => {
                 console.log('Found Documents:', docs);
+                
+                //in the params list - look for a Document with name: Breadcrumb Trail
+                // Campground and update the description field with the value below
+                dboper.updateDocument(db, {name: "Breadcrumb Trail Campground"}, {description: "Updated Test Description"}, 'campsites', result => {
+                    console.log("Updated Document Count: ", result.result.nModified);
 
-                //close connection
-                client.close();
-            });
-        });
+                    //call findDocuments again and console.log to confirm update has 
+                    //occured
+                    dboper.findDocuments(db, 'campsites', docs => {
+                        console.log("Found Documents: ", docs);
 
+                        dboper.removeDocument(db, {name: "Breadcrumb Trail Campground"}, 'campsites', result => {
+                            console.log('Deleted Document Count: ', result.deletedCount)
+
+                            //close connection
+                            client.close();
+                        }   
+                    );
+                });
+            }    
+        );
     });
+});
+});
 });
